@@ -4,7 +4,7 @@ buildscript {
 
   def agp_version = rootProject.ext.has("androidGradlePluginVersion")
     ? rootProject.ext.get("androidGradlePluginVersion")
-    : "7.2.1"
+    : "8.1.4"
   repositories {
     google()
     mavenCentral()
