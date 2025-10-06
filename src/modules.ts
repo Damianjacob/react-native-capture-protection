@@ -31,20 +31,24 @@ const CaptureNotificationEmitter = isPlatformSupported
 const CaptureProtectionEventType = 'CaptureProtectionListener' as const;
 
 const allow: CaptureProtectionFunction['allow'] = async (option) => {
+  const {
+    record = false,
+    appSwitcher = false,
+    screenshot = false,
+  } = option ?? {
+    record: true,
+    appSwitcher: true,
+    screenshot: true,
+  };
   if (Platform.OS === 'android') {
-    return await CaptureProtectionAndroidModule?.allow?.();
+    if (appSwitcher) {
+      await CaptureProtectionAndroidModule?.allowAppSwitcher?.();
+    } else {
+      await CaptureProtectionAndroidModule?.allowAll?.();
+    }
+    // return await CaptureProtectionAndroidModule?.allowAll?.();
   }
   if (Platform.OS === 'ios') {
-    const {
-      record = false,
-      appSwitcher = false,
-      screenshot = false,
-    } = option ?? {
-      record: true,
-      appSwitcher: true,
-      screenshot: true,
-    };
-
     if (screenshot) {
       await CaptureProtectionIOSModule?.allowScreenshot?.();
     }
@@ -60,20 +64,23 @@ const allow: CaptureProtectionFunction['allow'] = async (option) => {
 };
 
 const prevent: CaptureProtectionFunction['prevent'] = async (option) => {
+  const {
+    record = false,
+    appSwitcher = false,
+    screenshot = false,
+  } = option ?? {
+    record: true,
+    appSwitcher: true,
+    screenshot: true,
+  };
   if (Platform.OS === 'android') {
-    return await CaptureProtectionAndroidModule?.prevent?.();
+    if (appSwitcher) {
+      return await CaptureProtectionAndroidModule?.preventAppSwitcher?.();
+    } else {
+      return await CaptureProtectionAndroidModule?.preventAll?.();
+    }
   }
   if (Platform.OS === 'ios') {
-    const {
-      record = false,
-      appSwitcher = false,
-      screenshot = false,
-    } = option ?? {
-      record: true,
-      appSwitcher: true,
-      screenshot: true,
-    };
-
     if (screenshot) {
       await CaptureProtectionIOSModule?.preventScreenshot?.();
     }

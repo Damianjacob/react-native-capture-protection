@@ -21,15 +21,16 @@ import android.view.WindowManager
 import com.captureprotection.constants.CaptureEventType
 import com.captureprotection.constants.Constants
 import com.facebook.react.module.annotations.ReactModule
+import com.facebook.react.module.annotations.ReactMethod
 
 @ReactModule(name = Constants.NAME)
 class CaptureProtectionModule(private val reactContext: ReactApplicationContext) :
-CaptureProtectionModuleSpec(reactContext), LifecycleEventListener {
+    CaptureProtectionModuleSpec(reactContext), LifecycleEventListener {
 
     override fun getName() = NAME
 
     val displayManager: DisplayManager =
-            reactContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        reactContext.getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
 
     val screens = ArrayList<Int>()
     val reactCurrentActivity: Activity?
@@ -58,114 +59,114 @@ CaptureProtectionModuleSpec(reactContext), LifecycleEventListener {
 
         if (CaptureProtectionModule.registerScreenCaptureCallback == null) {
             CaptureProtectionModule.registerScreenCaptureCallback =
-                    Reflection.getMethod(
-                            reactCurrentActivity!!.javaClass,
-                            "registerScreenCaptureCallback"
-                    )
+                Reflection.getMethod(
+                    reactCurrentActivity!!.javaClass,
+                    "registerScreenCaptureCallback"
+                )
         }
 
         if (CaptureProtectionModule.unregisterScreenCaptureCallback == null) {
             CaptureProtectionModule.unregisterScreenCaptureCallback =
-                    Reflection.getMethod(
-                            reactCurrentActivity!!.javaClass,
-                            "unregisterScreenCaptureCallback"
-                    )
+                Reflection.getMethod(
+                    reactCurrentActivity!!.javaClass,
+                    "unregisterScreenCaptureCallback"
+                )
         }
 
         if (CaptureProtectionModule.screenCaptureCallback == null ||
-                        CaptureProtectionModule.reactContext != reactContext
+            CaptureProtectionModule.reactContext != reactContext
         ) {
             CaptureProtectionModule.screenCaptureCallback =
-                    Reflection.createScreenCaptureCallback {
-                        triggerCaptureEvent(CaptureEventType.CAPTURED)
-                    }
+                Reflection.createScreenCaptureCallback {
+                    triggerCaptureEvent(CaptureEventType.CAPTURED)
+                }
         }
     }
 
     fun triggerCaptureEvent(type: CaptureEventType) {
         eventJob?.cancel()
         eventJob =
-                CoroutineScope(Dispatchers.Main).launch {
-                    try {
-                        Response.sendEvent(reactContext, Constants.LISTENER_EVENT_NAME, type.value)
-                        delay(1000)
-                        if (screens.isNotEmpty()) {
-                            Response.sendEvent(
-                                    reactContext,
-                                    Constants.LISTENER_EVENT_NAME,
-                                    CaptureEventType.RECORDING.value
-                            )
-                        } else {
-                            Response.sendEvent(
-                                    reactContext,
-                                    Constants.LISTENER_EVENT_NAME,
-                                    CaptureEventType.NONE.value
-                            )
-                        }
-                    } catch (e: Exception) {
-                        Log.e(Constants.NAME, "Error in triggerCaptureEvent: ${e.message}")
+            CoroutineScope(Dispatchers.Main).launch {
+                try {
+                    Response.sendEvent(reactContext, Constants.LISTENER_EVENT_NAME, type.value)
+                    delay(1000)
+                    if (screens.isNotEmpty()) {
+                        Response.sendEvent(
+                            reactContext,
+                            Constants.LISTENER_EVENT_NAME,
+                            CaptureEventType.RECORDING.value
+                        )
+                    } else {
+                        Response.sendEvent(
+                            reactContext,
+                            Constants.LISTENER_EVENT_NAME,
+                            CaptureEventType.NONE.value
+                        )
                     }
+                } catch (e: Exception) {
+                    Log.e(Constants.NAME, "Error in triggerCaptureEvent: ${e.message}")
                 }
+            }
     }
 
     fun registerDisplayListener() {
         if (CaptureProtectionModule.displayListener == null ||
-                        CaptureProtectionModule.reactContext != reactContext
+            CaptureProtectionModule.reactContext != reactContext
         ) {
             CaptureProtectionModule.displayListener =
-                    object : DisplayManager.DisplayListener {
-                        override fun onDisplayAdded(displayId: Int) {
-                            reactCurrentActivity?.runOnUiThread {
-                                if (displayManager.getDisplay(displayId) != null) {
-                                    screens.add(displayId)
-                                }
-                                try {
-                                    Response.sendEvent(
-                                            reactContext,
-                                            Constants.LISTENER_EVENT_NAME,
-                                            if (screens.isEmpty()) CaptureEventType.NONE.value
-                                            else CaptureEventType.RECORDING.value
-                                    )
-                                    Log.d(Constants.NAME, "=> display add event $displayId")
-                                } catch (e: Exception) {
-                                    Log.e(
-                                            Constants.NAME,
-                                            "display add event Error with displayId: $displayId, error: ${e.message}"
-                                    )
-                                }
+                object : DisplayManager.DisplayListener {
+                    override fun onDisplayAdded(displayId: Int) {
+                        reactCurrentActivity?.runOnUiThread {
+                            if (displayManager.getDisplay(displayId) != null) {
+                                screens.add(displayId)
                             }
-                        }
-
-                        override fun onDisplayRemoved(displayId: Int) {
-                            reactCurrentActivity?.runOnUiThread {
-                                val index = screens.indexOf(displayId)
-                                if (index > -1) {
-                                    screens.removeAt(index)
-                                }
-                                try {
-                                    if (screens.isEmpty()) {
-                                        triggerCaptureEvent(CaptureEventType.END_RECORDING)
-                                    } else {
-                                        Response.sendEvent(
-                                                reactContext,
-                                                Constants.LISTENER_EVENT_NAME,
-                                                CaptureEventType.RECORDING.value
-                                        )
-                                    }
-                                    Log.d(Constants.NAME, "=> display remove event $displayId")
-                                } catch (e: Exception) {
-                                    Log.e(
-                                            Constants.NAME,
-                                            "display remove event Error with displayId: $displayId, error: ${e.message}"
-                                    )
-                                }
+                            try {
+                                Response.sendEvent(
+                                    reactContext,
+                                    Constants.LISTENER_EVENT_NAME,
+                                    if (screens.isEmpty()) CaptureEventType.NONE.value
+                                    else CaptureEventType.RECORDING.value
+                                )
+                                Log.d(Constants.NAME, "=> display add event $displayId")
+                            } catch (e: Exception) {
+                                Log.e(
+                                    Constants.NAME,
+                                    "display add event Error with displayId: $displayId, error: ${e.message}"
+                                )
                             }
-                        }
-
-                        override fun onDisplayChanged(displayId: Int) {
-                            Log.d(Constants.NAME, "=> display change event $displayId")
                         }
                     }
+
+                    override fun onDisplayRemoved(displayId: Int) {
+                        reactCurrentActivity?.runOnUiThread {
+                            val index = screens.indexOf(displayId)
+                            if (index > -1) {
+                                screens.removeAt(index)
+                            }
+                            try {
+                                if (screens.isEmpty()) {
+                                    triggerCaptureEvent(CaptureEventType.END_RECORDING)
+                                } else {
+                                    Response.sendEvent(
+                                        reactContext,
+                                        Constants.LISTENER_EVENT_NAME,
+                                        CaptureEventType.RECORDING.value
+                                    )
+                                }
+                                Log.d(Constants.NAME, "=> display remove event $displayId")
+                            } catch (e: Exception) {
+                                Log.e(
+                                    Constants.NAME,
+                                    "display remove event Error with displayId: $displayId, error: ${e.message}"
+                                )
+                            }
+                        }
+                    }
+
+                    override fun onDisplayChanged(displayId: Int) {
+                        Log.d(Constants.NAME, "=> display change event $displayId")
+                    }
+                }
         }
     }
 
@@ -183,8 +184,8 @@ CaptureProtectionModuleSpec(reactContext), LifecycleEventListener {
             }
         }
         displayManager.registerDisplayListener(
-                CaptureProtectionModule.displayListener,
-                ModuleThread.MainHandler
+            CaptureProtectionModule.displayListener,
+            ModuleThread.MainHandler
         )
         CaptureProtectionModule.reactContext = reactContext
         reactContext.addLifecycleEventListener(this)
@@ -196,9 +197,9 @@ CaptureProtectionModuleSpec(reactContext), LifecycleEventListener {
 
             CaptureProtectionModule.registerScreenCaptureCallback?.let { method ->
                 method.invoke(
-                        reactCurrentActivity,
-                        ModuleThread.MainExecutor,
-                        CaptureProtectionModule.screenCaptureCallback
+                    reactCurrentActivity,
+                    ModuleThread.MainExecutor,
+                    CaptureProtectionModule.screenCaptureCallback
                 )
             }
         } catch (e: Exception) {
@@ -212,8 +213,8 @@ CaptureProtectionModuleSpec(reactContext), LifecycleEventListener {
         try {
             CaptureProtectionModule.unregisterScreenCaptureCallback?.let { method ->
                 method.invoke(
-                        reactCurrentActivity,
-                        CaptureProtectionModule.screenCaptureCallback
+                    reactCurrentActivity,
+                    CaptureProtectionModule.screenCaptureCallback
                 )
             }
         } catch (e: Exception) {
@@ -246,11 +247,11 @@ CaptureProtectionModuleSpec(reactContext), LifecycleEventListener {
                     ContextCompat.checkSelfPermission(it, Constants.requestPermission) ==
                             PackageManager.PERMISSION_GRANTED
                 }
-                        ?: false
+                    ?: false
             } catch (e: Exception) {
                 Log.e(
-                        Constants.NAME,
-                        "checkStoragePermission raised Exception: ${e.localizedMessage}"
+                    Constants.NAME,
+                    "checkStoragePermission raised Exception: ${e.localizedMessage}"
                 )
                 false
             }
@@ -273,8 +274,8 @@ CaptureProtectionModuleSpec(reactContext), LifecycleEventListener {
                 }
             } catch (e: Exception) {
                 Log.e(
-                        Constants.NAME,
-                        "requestStoragePermission raised Exception: ${e.localizedMessage}"
+                    Constants.NAME,
+                    "requestStoragePermission raised Exception: ${e.localizedMessage}"
                 )
                 false
             }
@@ -296,27 +297,27 @@ CaptureProtectionModuleSpec(reactContext), LifecycleEventListener {
 
         if (CaptureProtectionModule.registerScreenCaptureCallback == null) {
             if (CaptureProtectionModule.contentObserver == null &&
-                            checkStoragePermission()
+                checkStoragePermission()
             ) {
                 CaptureProtectionModule.contentObserver =
-                        object : ContentObserver(ModuleThread.MainHandler) {
-                            override fun onChange(selfChange: Boolean, uri: Uri?) {
-                                if (FileUtils.isImageUri(uri)) {
-                                    if (FileUtils.isScreenshotFile(reactContext, uri!!)) {
-                                        Log.d(
-                                                Constants.NAME,
-                                                "CaptureProtectionModule.contentObserver detect screenshot file"
-                                        )
-                                        triggerCaptureEvent(CaptureEventType.CAPTURED)
-                                    }
+                    object : ContentObserver(ModuleThread.MainHandler) {
+                        override fun onChange(selfChange: Boolean, uri: Uri?) {
+                            if (FileUtils.isImageUri(uri)) {
+                                if (FileUtils.isScreenshotFile(reactContext, uri!!)) {
+                                    Log.d(
+                                        Constants.NAME,
+                                        "CaptureProtectionModule.contentObserver detect screenshot file"
+                                    )
+                                    triggerCaptureEvent(CaptureEventType.CAPTURED)
                                 }
-                                super.onChange(selfChange, uri)
                             }
+                            super.onChange(selfChange, uri)
                         }
+                    }
                 reactContext.contentResolver.registerContentObserver(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                        true,
-                        CaptureProtectionModule.contentObserver!!
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    true,
+                    CaptureProtectionModule.contentObserver!!
                 )
             }
         }
@@ -343,119 +344,147 @@ CaptureProtectionModuleSpec(reactContext), LifecycleEventListener {
         return displayListener != null
     }
 
-    
-  @ReactMethod
-  override fun addListener(eventName: String) {
-    addScreenCaptureListener()
-  }
 
-  @ReactMethod
-  override fun removeListeners(count: Double) {
-    // removeScreenCaptureListener()
-  }
+    @ReactMethod
+    override fun addListener(eventName: String) {
+        addScreenCaptureListener()
+    }
 
-  @ReactMethod
-  override fun hasListener(promise: Promise) {
-    if (reactCurrentActivity == null) {
-        promise.reject("hasListener", RuntimeException("Activity is null"))
-        return
+    @ReactMethod
+    override fun removeListeners(count: Double) {
+        // removeScreenCaptureListener()
     }
-    reactCurrentActivity?.runOnUiThread {
-      try {
-        val params = hasScreenCaptureListener()
-        promise.resolve(params)
-      } catch (e: Exception) {
-        promise.reject("hasListener", e)
-      }
-    }
-  }
 
-  @ReactMethod
-  override fun isScreenRecording(promise: Promise) {
-    if (reactCurrentActivity == null) {
-        promise.reject("isScreenRecording", RuntimeException("Activity is null"))
-        return
+    @ReactMethod
+    override fun hasListener(promise: Promise) {
+        if (reactCurrentActivity == null) {
+            promise.reject("hasListener", RuntimeException("Activity is null"))
+            return
+        }
+        reactCurrentActivity?.runOnUiThread {
+            try {
+                val params = hasScreenCaptureListener()
+                promise.resolve(params)
+            } catch (e: Exception) {
+                promise.reject("hasListener", e)
+            }
+        }
     }
-    reactCurrentActivity?.runOnUiThread {
-      try {
-        promise.resolve(screens.size > 1)
-      } catch (e: Exception) {
-        promise.reject("isScreenRecording", e)
-      }
-    }
-  }
 
-  @ReactMethod
-  override fun prevent(promise: Promise) {
-    if (reactCurrentActivity == null) {
-        promise.reject("prevent", RuntimeException("Activity is null"))
-        return
+    @ReactMethod
+    override fun isScreenRecording(promise: Promise) {
+        if (reactCurrentActivity == null) {
+            promise.reject("isScreenRecording", RuntimeException("Activity is null"))
+            return
+        }
+        reactCurrentActivity?.runOnUiThread {
+            try {
+                promise.resolve(screens.size > 1)
+            } catch (e: Exception) {
+                promise.reject("isScreenRecording", e)
+            }
+        }
     }
-    reactCurrentActivity?.runOnUiThread {
-      try {
-        val currentActivity = ActivityUtils.getReactCurrentActivity(reactContext)
-        currentActivity!!.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        Response.sendEvent(
-                reactContext,
-                Constants.LISTENER_EVENT_NAME,
-                CaptureEventType.PREVENT_SCREEN_CAPTURE.value +
-                        CaptureEventType.PREVENT_SCREEN_RECORDING.value +
-                        CaptureEventType.PREVENT_SCREEN_APP_SWITCHING.value
-        )
-        promise.resolve(true)
-      } catch (e: Exception) {
-        promise.reject("prevent", e)
-      }
-    }
-  }
 
-  @ReactMethod
-  override fun allow(promise: Promise) {
-    if (reactCurrentActivity == null) {
-        promise.reject("allow", RuntimeException("Activity is null"))
-        return
+    @ReactMethod
+    override fun preventAll(promise: Promise) {
+        if (reactCurrentActivity == null) {
+            promise.reject("prevent", RuntimeException("Activity is null"))
+            return
+        }
+        reactCurrentActivity?.runOnUiThread {
+            try {
+                val currentActivity = ActivityUtils.getReactCurrentActivity(reactContext)
+                currentActivity!!.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                Response.sendEvent(
+                    reactContext,
+                    Constants.LISTENER_EVENT_NAME,
+                    CaptureEventType.PREVENT_SCREEN_CAPTURE.value +
+                            CaptureEventType.PREVENT_SCREEN_RECORDING.value +
+                            CaptureEventType.PREVENT_SCREEN_APP_SWITCHING.value
+                )
+                promise.resolve(true)
+            } catch (e: Exception) {
+                promise.reject("prevent", e)
+            }
+        }
     }
-    reactCurrentActivity?.runOnUiThread {
-      try {
-        val currentActivity = ActivityUtils.getReactCurrentActivity(reactContext)
-        currentActivity!!.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        Response.sendEvent(
-                reactContext,
-                Constants.LISTENER_EVENT_NAME,
-                CaptureEventType.ALLOW.value
-        )
-        promise.resolve(true)
-      } catch (e: Exception) {
-        promise.reject("allow", e)
-      }
-    }
-  }
 
-  @ReactMethod
-  override fun protectionStatus(promise: Promise) {
-    if (reactCurrentActivity == null) {
-        promise.reject("protectionStatus", RuntimeException("Activity is null"))
-        return
+    @ReactMethod
+    override fun allowAll(promise: Promise) {
+        if (reactCurrentActivity == null) {
+            promise.reject("allow", RuntimeException("Activity is null"))
+            return
+        }
+        reactCurrentActivity?.runOnUiThread {
+            try {
+                val currentActivity = ActivityUtils.getReactCurrentActivity(reactContext)
+                currentActivity!!.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                Response.sendEvent(
+                    reactContext,
+                    Constants.LISTENER_EVENT_NAME,
+                    CaptureEventType.ALLOW.value
+                )
+                promise.resolve(true)
+            } catch (e: Exception) {
+                promise.reject("allow", e)
+            }
+        }
     }
-    reactCurrentActivity?.runOnUiThread {
-      try {
-        val flags = ActivityUtils.isSecureFlag(reactContext)
-        promise.resolve(flags)
-      } catch (e: Exception) {
-        promise.reject("protectionStatus", e)
-      }
+
+    @ReactMethod
+    override fun preventAppSwitcher(promise: Promise) {
+        if (reactCurrentActivity == null) {
+            promise.reject("allow", RuntimeException("Activity is null"))
+            return
+        }
+        reactCurrentActivity?.runOnUiThread {
+            try {
+                val currentActivity = ActivityUtils.getReactCurrentActivity(reactContext)
+
+                fun setRecentScreenshotsEnabled(enabled: Boolean) {
+                    val activity = currentActivity ?: return
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        activity.setRecentsScreenshotEnabled(enabled)
+                    }
+                }
+                Response.sendEvent(
+                    reactContext,
+                    Constants.LISTENER_EVENT_NAME,
+                    CaptureEventType.ALLOW.value
+                )
+                promise.resolve(true)
+            } catch (e: Exception) {
+                promise.reject("allow", e)
+            }
+        }
     }
-  }
 
-  @ReactMethod
-  override fun requestPermission(promise: Promise) {
-    val isPermission = requestStoragePermission()
-    promise.resolve(isPermission)
-  }
+    @ReactMethod
+    override fun protectionStatus(promise: Promise) {
+        if (reactCurrentActivity == null) {
+            promise.reject("protectionStatus", RuntimeException("Activity is null"))
+            return
+        }
+        reactCurrentActivity?.runOnUiThread {
+            try {
+                val flags = ActivityUtils.isSecureFlag(reactContext)
+                promise.resolve(flags)
+            } catch (e: Exception) {
+                promise.reject("protectionStatus", e)
+            }
+        }
+    }
 
-  @ReactMethod
-  override fun checkPermission(promise: Promise) {
-    val isPermission = checkStoragePermission()
-    promise.resolve(isPermission)
-  }
+    @ReactMethod
+    override fun requestPermission(promise: Promise) {
+        val isPermission = requestStoragePermission()
+        promise.resolve(isPermission)
+    }
+
+    @ReactMethod
+    override fun checkPermission(promise: Promise) {
+        val isPermission = checkStoragePermission()
+        promise.resolve(isPermission)
+    }
 }

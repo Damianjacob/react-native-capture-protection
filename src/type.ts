@@ -94,8 +94,11 @@ export interface CaptureProtectionIOSNativeModules {
   isScreenRecording: () => Promise<boolean | undefined>;
 }
 export interface CaptureProtectionAndroidNativeModules {
-  allow: () => Promise<void>;
-  prevent: () => Promise<void>;
+  allowAll: () => Promise<void>;
+  allowAppSwitcher: () => Promise<void>;
+  preventAll: () => Promise<void>;
+  preventAppSwitcher: () => Promise<void>;
+  //   prevent: () => Promise<void>;
   hasListener: () => Promise<boolean>;
   protectionStatus: () => Promise<boolean>;
   isScreenRecording: () => Promise<boolean | undefined>;
